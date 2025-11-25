@@ -17,10 +17,10 @@ public final class LiteBinds extends JavaPlugin {
     @Getter
     private static LiteBinds instance;
     private DatabaseManager databaseManager;
+    private EventListener eventListener;
 
     @Override
     public void onEnable() {
-        // Plugin startup logic
         instance = this;
         setupDatabase();
         setupCommands();
@@ -49,12 +49,12 @@ public final class LiteBinds extends JavaPlugin {
     private void setupListeners(){
         new MenuListener().register();
         PluginManager pluginManager = super.getServer().getPluginManager();
-        pluginManager.registerEvents(new EventListener(), this);
+        eventListener = new EventListener();
+        pluginManager.registerEvents(eventListener, this);
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
         for(Player player : Bukkit.getOnlinePlayers()){
             if(player.getOpenInventory().getTopInventory().getHolder() instanceof Menu){
                 player.closeInventory();

@@ -28,11 +28,13 @@ public class MenuListener extends AbstractListener {
             int slot = event.getSlot();
             if(slot == 22){
                 var dbm = LiteBinds.getInstance().getDatabaseManager();
+                String playerName = player.getName();
                 CompletableFuture.allOf(
-                        dbm.updateActionDrop(player.getName(), ActionType.NONE),
-                        dbm.updateActionSwap(player.getName(), ActionType.NONE),
-                        dbm.updateActionInteract(player.getName(), ActionType.NONE)
+                        dbm.updateActionDrop(playerName, ActionType.NONE),
+                        dbm.updateActionSwap(playerName, ActionType.NONE),
+                        dbm.updateActionInteract(playerName, ActionType.NONE)
                 ).thenAccept((v) -> {
+                    LiteBinds.getInstance().getEventListener().invalidatePlayerCache(playerName);
                     Bukkit.getScheduler().runTask(LiteBinds.getInstance(), () -> {
                         menu.compile().open();
                     });
@@ -160,6 +162,7 @@ public class MenuListener extends AbstractListener {
                 }
 
                 LiteBinds.getInstance().getDatabaseManager().savePlayerActions(playerActions).get();
+                LiteBinds.getInstance().getEventListener().invalidatePlayerCache(player.getName());
 
             } catch (Exception e) {
                 throw new RuntimeException(e);

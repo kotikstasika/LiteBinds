@@ -3,8 +3,6 @@ package org.dimasik.litebinds.menu.menus;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -13,7 +11,6 @@ import org.dimasik.litebinds.database.ActionType;
 import org.dimasik.litebinds.database.PlayerActions;
 import org.dimasik.litebinds.menu.abst.AbstractMenu;
 import org.dimasik.litebinds.utils.Parser;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
