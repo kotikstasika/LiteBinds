@@ -11,6 +11,8 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -22,70 +24,87 @@ import org.dimasik.litebinds.database.ActionType;
 import org.dimasik.litebinds.database.PlayerActions;
 import org.dimasik.litebinds.utils.Parser;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class EventListener implements Listener {
-    private final Map<UUID, Material> lastHeldItemTypes = new ConcurrentHashMap<>();
+    private final Map<UUID, ItemStack> lastHeldItems = new HashMap<>();
     private final Map<String, PlayerActions> playerActionsCache = new ConcurrentHashMap<>();
-    private Plugin holyLiteItemsPlugin;
-    private Plugin holyBackPackPlugin;
+
+    private final Plugin holyLiteItemsPlugin;
+    private final Plugin holyBackPackPlugin;
     private NamespacedKey itemTypeKey;
     private NamespacedKey backpackLevelKey;
 
-    public EventListener(){
+    public EventListener() {
         holyLiteItemsPlugin = Bukkit.getPluginManager().getPlugin("HolyLiteItems");
         holyBackPackPlugin = Bukkit.getPluginManager().getPlugin("HolyBackPack");
+
         if (holyLiteItemsPlugin != null) {
             itemTypeKey = new NamespacedKey(holyLiteItemsPlugin, "item-type");
         }
         if (holyBackPackPlugin != null) {
             backpackLevelKey = new NamespacedKey(holyBackPackPlugin, "backpack-level");
         }
-        
+
         Bukkit.getScheduler().runTaskTimer(LiteBinds.getInstance(), () -> {
-            for(Player player : Bukkit.getOnlinePlayers()){
-                ItemStack item = player.getInventory().getItemInHand();
-                Material material = item != null ? item.getType() : Material.AIR;
-                lastHeldItemTypes.put(player.getUniqueId(), material);
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                ItemStack newItem = player.getInventory().getItemInHand();
+                if (newItem != null) {
+                    lastHeldItems.put(player.getUniqueId(), newItem.clone());
+                }
             }
-        }, 0, 5);
+        }, 0, 1);
+    }
+
+    @EventHandler
+    public void on(InventoryClickEvent event) {
+        if (event.getClick() == ClickType.DROP || event.getClick() == ClickType.CONTROL_DROP || event.getClick() == ClickType.RIGHT || event.getClick() == ClickType.LEFT || event.getClick() == ClickType.SWAP_OFFHAND || event.getClick() == ClickType.DOUBLE_CLICK) {
+            lastHeldItems.remove(event.getWhoClicked().getUniqueId());
+        }
     }
 
     @EventHandler
     public void on(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
         ItemStack droppedItem = event.getItemDrop().getItemStack();
-        Material lastHeldType = lastHeldItemTypes.get(player.getUniqueId());
+        ItemStack lastHeldItem = lastHeldItems.get(player.getUniqueId());
 
-        if (lastHeldType == Material.NETHERITE_SWORD && droppedItem.getType() == Material.NETHERITE_SWORD) {
+        if (lastHeldItem != null && lastHeldItem.isSimilar(droppedItem) && droppedItem.getType() == Material.NETHERITE_SWORD) {
 
             PlayerActions playerActions = getCachedPlayerActions(player.getName());
             ActionType actionType = playerActions.getActionDrop();
             if (actionType != ActionType.NONE) {
-                trigger(event, player, actionType);
+                if (!event.isCancelled()) {
+                    trigger(event, player, actionType);
+                }
             }
         }
     }
 
     @EventHandler
-    public void on(PlayerSwapHandItemsEvent event){
+    public void on(PlayerSwapHandItemsEvent event) {
         Player player = event.getPlayer();
         ItemStack offHandItem = event.getOffHandItem();
+
         if (offHandItem != null && offHandItem.getType() == Material.NETHERITE_SWORD) {
             PlayerActions playerActions = getCachedPlayerActions(player.getName());
             ActionType actionType = playerActions.getActionSwap();
             if (actionType != ActionType.NONE) {
-                trigger(event, player, actionType);
+                if (!event.isCancelled()) {
+                    trigger(event, player, actionType);
+                }
             }
         }
     }
 
     @EventHandler
-    public void on(PlayerInteractEvent event){
+    public void on(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         Action action = event.getAction();
+
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
@@ -102,7 +121,9 @@ public class EventListener implements Listener {
             PlayerActions playerActions = getCachedPlayerActions(player.getName());
             ActionType actionType = playerActions.getActionInteract();
             if (actionType != ActionType.NONE) {
-                trigger(event, player, actionType);
+                if (!event.isCancelled()) {
+                    trigger(event, player, actionType);
+                }
             }
         }
     }
@@ -125,8 +146,8 @@ public class EventListener implements Listener {
         playerActionsCache.remove(playerName);
     }
 
-    private void trigger(Cancellable event, Player player, ActionType actionType){
-        switch (actionType){
+    private void trigger(Cancellable event, Player player, ActionType actionType) {
+        switch (actionType) {
             case SNOWBALL -> {
                 if (holyLiteItemsPlugin == null || itemTypeKey == null) {
                     return;
@@ -258,8 +279,8 @@ public class EventListener implements Listener {
         return null;
     }
 
-    private void sendNotFoundMessage(Player player, String kotik) {
-        String message = Parser.color("&x&F&F&2&A&0&0▶ " + kotik + " &fне найден в инвентаре. Пополните запасы, чтобы быстро использовать его.");
+    private void sendNotFoundMessage(Player player, String itemName) {
+        String message = Parser.color("&x&F&F&2&A&0&0▶ " + itemName + " &fне найден в инвентаре. Пополните запасы, чтобы быстро использовать его.");
         player.sendMessage(message);
     }
 }
