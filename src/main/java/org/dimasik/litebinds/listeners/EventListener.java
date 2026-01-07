@@ -73,7 +73,6 @@ public class EventListener implements Listener {
         ItemStack lastHeldItem = lastHeldItems.get(player.getUniqueId());
 
         if (lastHeldItem != null && lastHeldItem.isSimilar(droppedItem) && droppedItem.getType() == Material.NETHERITE_SWORD) {
-
             PlayerActions playerActions = getCachedPlayerActions(player.getName());
             ActionType actionType = playerActions.getActionDrop();
             if (actionType != ActionType.NONE) {
@@ -109,23 +108,26 @@ public class EventListener implements Listener {
             return;
         }
 
-        if (action == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null) {
-            Material blockType = event.getClickedBlock().getType();
-            if (isInteractableBlock(blockType)) {
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() != Material.NETHERITE_SWORD) {
+            return;
+        }
+
+        if(event.getClickedBlock() != null) {
+            if (isInteractableBlock(event.getClickedBlock().getType())) {
                 return;
             }
         }
 
-        ItemStack item = event.getItem();
-        if (item != null && item.getType() == Material.NETHERITE_SWORD) {
-            PlayerActions playerActions = getCachedPlayerActions(player.getName());
-            ActionType actionType = playerActions.getActionInteract();
-            if (actionType != ActionType.NONE) {
-                if (!event.isCancelled()) {
-                    trigger(event, player, actionType);
-                }
-            }
+
+        PlayerActions playerActions = getCachedPlayerActions(player.getName());
+        ActionType actionType = playerActions.getActionInteract();
+        if (actionType == ActionType.NONE) {
+            return;
         }
+
+        event.setCancelled(true);
+        trigger(event, player, actionType);
     }
 
     private boolean isInteractableBlock(Material material) {
